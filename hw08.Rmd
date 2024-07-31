@@ -1,0 +1,298 @@
+---
+author: "Farouk Alghazzy"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE,
+                      warning = FALSE, error = TRUE, fig.height = 3)
+library(tidyverse)
+library(kableExtra)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+```
+
+\newcommand{\E}{\mathsf{E}}
+\newcommand{\Var}{\mathsf{Var}}
+\renewcommand{\prob}{\mathsf{P}}
+
+
+## Assignment 8
+
+### Preliminaries
+
+- Directories
+    - COURSE/homework/
+    - COURSE/homework/hw08/
+    - COURSE/data/
+    - COURSE/scripts/
+- Files
+  - COURSE/homework/hw08/hw08.Rmd
+  - COURSE/scripts/viridis.R
+  - COURSE/scripts/ggprob.R
+
+### Aims
+
+- Practice the binomial distribution and normal distributions.
+
+### Problems
+
+##### 1.
+Let the random variable $X \sim \text{Binomial}(150, 0.4)$.
+
+-1a. Calculate and report the mean and standard deviation of the distribution.
+
+```{r}
+n = 150
+p = 0.4
+
+mu = n*p
+print(paste("mean: ",mu))
+sigma = sqrt(n*p*(1-p))
+print(paste("standard deviation: ",sigma))
+```
+
+-1b. Calculate and report the probability that the random variable is exactly equal to 70, $\prob(X = 70)$.
+
+```{r}
+dbinom(70, n, p)
+```
+
+-1c. Calculate and report the probability that $X$ equals 70 or more, $\prob(X \ge 70)$.
+
+```{r}
+prob_1c = 1 - pbinom(69, n, p)
+prob_1c
+```
+
+-1d. Draw a graph of the binomial distribution with vertical lines at the mean (red and dashed), and 1, 2, and 3 standard deviations above and below the mean (red and dotted).
+
+
+```{r}
+gbinom(n,p, scale=TRUE) +
+  geom_vline(xintercept = mu, color = "red",
+             linetype = "dashed") +
+  geom_vline(xintercept = mu + c(-3,-2,-1,1,2,3)*sigma,
+             color = "red",
+             linetype = "dotted")
+```
+
+
+
+##### 2.
+What are the probabilities that $X$ from Problem 1 is within one, two, and three standard deviations of the mean? Round each probability to four decimal places.
+
+-2a.
+$\prob(\mu - \sigma \le X \le \mu + \sigma)$
+```{r}
+round((pbinom(mu+1*sigma, n, p) - pbinom(mu-1*sigma, n, p)),4)
+```
+
+-2b.
+$\prob(\mu - 2\sigma \le X \le \mu + 2\sigma)$
+```{r}
+round((pbinom(mu+2*sigma, n, p) - pbinom(mu-2*sigma, n, p)),4)
+```
+
+-2c.
+$\prob(\mu - 3\sigma \le X \le \mu + 3\sigma)$
+```{r}
+round((pbinom(mu+3*sigma, n, p) - pbinom(mu-3*sigma, n, p)),4)
+```
+
+
+
+##### 3.
+The following code makes a graph of the cumulative distribution function for the $\text{Binomial}(7, 0.3)$ distribution, that is $F(x) = \prob(X \le x)$. This is the function which is calculated by the base R function `pbinom()`.
+
+
+```{r}
+prob4 = tibble(
+  x = seq(-1,8,1),
+  p = dbinom(x, 7, 0.3),
+  cdf = pbinom(x, 7, 0.3))
+
+ggplot(prob4, aes(x = x, y = cdf )) +
+  geom_step(color = "blue") +
+  geom_hline(yintercept = 0) +
+  geom_hline(yintercept = 0.4, color = "red", linetype = "dashed") +
+  scale_x_continuous(breaks = 0:7) +
+  xlab("x") +
+  ylab("Probability") +
+  ggtitle("Binomial(7, 0.3) distribution CDF") +
+  theme_minimal()
+```
+
+-3a. Calculate the 0.4 quantile of the $\text{Binomial}(7, 0.3)$
+
+```{r}
+qbinom(0.4, 7, 0.3)
+```
+
+-3b. Explain how the value of the quantile is related to the red dotted line in the plot.
+
+> This relates to the dotted line above because the line at a probability of 0.4 crosses with the vertical line at x=2.
+
+-3c. Use the graph to determine the 0.75 quantile of this distribution.
+Then verify your observation with a calculation.
+
+```{r}
+#Seems like the 0.75 quantile will be x = 3
+qbinom(0.75, 7, 0.3)
+```
+
+
+
+
+
+##### 4.
+In a large population of likely voters, the proportion of voters who plan to vote for candidate A is $p = 0.52$. In a random sample of 750 likely voters, what is the probability that the proportion of voters who plan to vote for candidate A is less than 50% (the number of such voters is less than 375)?
+  
+```{r}
+n = 750
+p = 0.52
+pbinom(374 ,n, p)
+```
+
+
+
+##### 5.
+Create a data frame with the following columns.
+Each row corresponds to a single $\text{Binomial}(n,p)$ distribution. The first two columns are the parameters of the distribution.
+
+- `n`, which ranges from 10 to 1000 by 10s $(10, 20, 30, \ldots, 1000)$
+- `p`, which is always equal to $0.7$
+- `mu`, the mean
+- `sigma`, the standard deviation
+- `q90`, the 0.9 quantile (or 90th percentile)
+- `prob_1`, $\prob(\mu - 10 \le X \le \mu + 10)$, the probability that the random variable is within 10 of the mean
+- `prob_2`, $\prob(0.69 \le X/n \le 0.71)$, the probability that the sample proportion $\hat{p} = X/n$ is within 0.01 of $p$.
+
+**Note that $\prob(0.69 \le X/n \le 0.71)$ if and only if $\prob(0.69n \le X \le 0.71n)$.**
+
+
+-5a. Create the data frame. Then print the first 20 rows of it.
+
+```{r}
+prob_5a = tibble(
+  n = seq(10,1000,by=10),
+  p = 0.7,
+  mu = n*p,
+  sigma = sqrt(n*p*(1-p)),
+  q90 = qbinom(0.9, n, p),
+  prob_1 = (pbinom(mu+10, n, p) - pbinom(mu-10, n, p)),
+  prob_2 = ((pbinom(0.71*n, n, p))) - (pbinom(0.69*n, n, p))
+)
+prob_5a_df = prob_5a %>%
+  select(n,p,mu,sigma,q90,prob_1,prob_2) %>%
+  print(n=20)
+```
+
+-5b. Make a plot of `q90` versus `n` (`n` is on the x axis). Describe the pattern you see.
+
+```{r}
+ggplot(data = prob_5a ,aes(x=n,y=q90)) +
+  geom_line() +
+  ggtitle("'q90' versus 'n'")
+```
+
+> The pattern is a positive linear relationship, so as n increases, q90 increases proportionally
+
+-5c. Make a plot of `prob_1` versus `n`. How does the probability that $X$ is within a fixed width interval around $\mu$ change as `n` increases?
+
+```{r}
+ggplot(data = prob_5a ,aes(x=n,y=prob_1)) +
+  geom_line() +
+  ggtitle("'prob_1' versus 'n'")
+```
+
+> As n increases, prob_1 decreases in a close to linear pattern
+
+-5d. Make a plot of `prob_2` versus `n`. How does the probability that the sample proportion is within a fixed width interval around `p` change as `n` increases?
+
+```{r}
+ggplot(data = prob_5a ,aes(x=n,y=prob_2)) +
+  geom_line() +
+  ggtitle("'prob_2' versus 'n'")
+```
+
+> As n increases, prob_2 increases, but in smaller intervals, it decreases
+
+
+
+##### 6.
+Suppose that $X \sim N(200, 40)$, ($X$ has a normal distribution with mean $\mu = 200$ and standard deviation $\sigma = 40$).
+
+-6a. Make a graph of this normal distribution.
+
+```{r}
+prob_6a = gnorm(200,40)
+prob_6a
+```
+
+-6b. Find $P(X > 250)$. Create a graph of the normal density with the corresponding interval $X > 250$ shaded.
+
+```{r}
+prob_6a = 1-pnorm(250,200,40)
+prob_6a
+gnorm(200,40) +
+  geom_norm_fill(200,40, a = 250L, b = NULL) +
+  theme_minimal()
+```
+
+-6c. For what value $z$ is $P(Z > z)$ equal to $P(X > 250)$ where $Z$ is a standard normal random variable?
+
+```{r}
+z = qnorm(1-prob_6a,0,1)
+z
+```
+
+-6d. Find a number $a$ such that $P(200 - a < X < 200 + a) = 0.70$. Create a graph which shows the normal density with the interval from $200 -a$ to $200 + a$ shaded.
+
+```{r}
+a_plus_200 = qnorm(.85, 200, 40)
+a = a_plus_200 - 200
+print(paste("a = ",a))
+pnorm(200+a,200,40)-pnorm(200-a,200,40)
+```
+
+
+##### 7.
+Assume that the total number of points scored in an NCAA men's college basketball game is approximately normal (true values are discrete, but we approximate with a continuous distribution) with a mean $\mu = 145.25$ and a standard deviation $\sigma = 18.51$.
+
+-7a. In what proportion of games do we expect the total points scored to be 160 or more? (**Note: to correct for continuity, use 159.5.**)
+
+```{r}
+mu7 = 145.25
+sigma7 = 18.51
+pnorm(159.5, mu7, sigma7, lower.tail = FALSE)
+```
+
+-7b. What is the (approximate) probability that the mean total points per game in a random sample of 10 games is more than 160?
+
+```{r}
+B = 1000000
+prob7b_df = tibble(
+  xbar = map_dbl(1:B, ~mean(rnorm(10, mu7, sigma7))))
+prob7b = prob7b_df %>% 
+  summarize(p = mean(xbar>160)) %>% 
+  pull(p)
+
+prob7b
+```
+
+
+
+##### 8.
+Consider the same NCAA basketball scoring distribution from the previous problem.
+Find a value $a$ where there is about a ten percent change that the total score of a random game is $a$ or higher, assuming a good approximation to a normal distribution.
+
+```{r}
+a= qnorm(0.1, mu7, sigma7, lower.tail=FALSE)
+print(paste("a = ",a))
+```
+
+
+  
+
+
