@@ -1,0 +1,182 @@
+---
+author: "Ira Hande"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE,
+                      warning = FALSE, error = TRUE, fig.height = 3)
+library(tidyverse)
+library(lubridate)
+library(kableExtra)
+library(broman)
+source("../../scripts/viridis.R")
+source("../../scripts/ggprob.R")
+theme_set(theme_minimal())
+```
+
+\newcommand{\E}{\mathsf{E}}
+\newcommand{\Var}{\mathsf{Var}}
+\newcommand{\SD}{\mathsf{SD}}
+\renewcommand{\prob}{\mathsf{P}}
+
+
+- Directories
+
+    - COURSE/data/
+    - COURSE/scripts/
+- Files
+
+  - COURSE/scripts/viridis.R
+  - COURSE/scripts/ggprob.R
+  
+> Group: DIS 317 Group 6 
+> Names: Eleanor Zhang, Ira Hande, Farouk Alghazzy, Gianmarco Katz
+
+> Introduction: Within the bustling city of Milwaukee, the air we breathe tells a story–a narrative of industrialization, environmental consciousness, and our dynamic interplay between human activity and nature’s resilience. As Milwaukee has evolved over the years, so too has the composition of its atmosphere. Understanding the trajectory of the world’s biggest air pollutant, carbon monoxide, specifically in Milwaukee is not just an academic pursuit; it’s a crucial endeavor with profound implications for public health and the future of the city. We believe that the carbon monoxide concentration in Milwaukee in 2023 has significantly increased compared to 1993. We analyzed our thesis statement through a variety of graphs, p-values, and t-tests and we can conclude that our thesis is correct.
+
+>Background: 
+We have two data sets for the years 1993 and 2023, both collected by the Environmental Protection Agency. Each of these data sets have observations for the CO levels for every day of both years in the Milwaukee atmosphere. The data was collected on a daily basis by the Environmental Protection Agency. Our dataset’s variables include the daily max 8-hour CO concentration for the given day, date, state, and county. The daily max-8 hour concentration for a given calendar day is the highest of 24 possible 8-hour average concentrations computed for that day. This process is constantly repeated, yielding a daily maximum 8 hour CO concentration for each calendar day in Milwaukee. 
+A possible major anomaly in our dataset could be sudden, significant spikes or drops in pollutant levels that can’t be explained by usual variations or seasonal trends. This anomaly could be a malfunction in equipment or an exceptional event like a large-scale industrial accident or wildfire.
+We went through and cleaned up the original dataset obtained from the Environmental Protection Agency by removing variables that are irrelevant to our topic. Later on, we use our cleaned dataset to determine the difference in the CO concentrations of Milwaukee from 1993 compared to now. Our goal for the rest of the report is to analyze and compare the CO concentrations of the two years and whether there is enough statistical evidence that the CO concentration levels of Milwaukee in 2023 have increased compared to the levels in 1993. Additionally, we will include graphics and visualizations that will help determine whether or not our thesis is correct.
+Research Question: What are the different trends of carbon concentration in Milwaukee, WI in 1993 and 2023 and how do they compare? Specifically, is there an overall higher concentration of carbon dioxide in 2023 compared to 30 years before? 
+Data Description:
+Who collected it: the Environmental Protection Agency
+How was the data collected?: On a daily basis, our servers collect the reservation data for every listing on both Airbnb and Vrbo. From daily calendar pricing to cancellation policies and booking lead time, we aggregate and process comprehensive data on over 10 million properties in over 120,000 international markets. We do this by “scraping” (or extracting) data using a host of servers. - the EPA’s website
+What does a single row of the data set represent in real terms?: The Daily Max 8-hour CO Concentration on that given day.
+What are key variables in the data set, what do they measure, and how are they related to your key questions?: The key variables include daily max 8 hour CO concentration and date. They will measure how the CO concentration changes over the given time period.
+If the data may be thought of as a sample from some larger population, what is that larger population? It could possibly be thought of as a sample of other medium sized cities in America such as Madison.
+
+> Data link: https://www.epa.gov/outdoor-air-quality-data/download-daily-data 
+
+
+
+```{r}
+CO2023 = read_csv("../../data/milwaukee_2023_data.csv")
+CO1993 = read_csv("../../data/milwaukee_1993_data.csv")
+```
+
+```{r}
+co2023 <- CO2023 %>%
+  rename(CONCENTRATION = "Daily Max 8-hour CO Concentration") %>%
+  mutate(DATE = mdy(Date)) %>%
+  select(DATE, CONCENTRATION, UNITS, STATE, COUNTY)
+
+co1993 <- CO1993 %>%
+  rename(CONCENTRATION = "Daily Max 8-hour CO Concentration") %>%
+  mutate(DATE = mdy(Date)) %>%
+  select(DATE, CONCENTRATION, UNITS, STATE, COUNTY)
+
+mw_co <- inner_join(co2023, co1993, by = "DATE")
+```
+scatterplot:
+```{r}
+ggplot(co1993, aes(x = DATE, y = CONCENTRATION)) +
+  geom_point() +
+  labs(
+    title = "Scatterplot for year 1993",
+    x = "Date",
+    y = "Concentration of CO"
+  ) +
+  geom_smooth() +
+  theme_minimal()
+
+```
+> 1993 Scatterplot: This plot shows a general trend of carbon concentration in Milwaukee rising in the winter, and being the lowest in the summer. However, the majority of the points are below 2 ppm. 
+
+```{r}
+ggplot(co2023, aes(x = DATE, y = CONCENTRATION)) +
+  geom_point() +
+  labs(
+    title = "Scatterplot for year 2023",
+    x = "Date",
+    y = "Concentration of CO"
+  ) +
+  geom_smooth() +
+  theme_minimal()
+```
+> 2023 Scatterplot: The “area” in which data gathered for Milwaukee seems to have lessened, however, there is still a trend of most of the carbon plot points being below 1 ppm. However, there seems to be an opposite trend of the concentration levels increasing in the summers and as well as in the winters. 
+
+```{r}
+ggplot(co1993, aes(x = DATE, y = CONCENTRATION)) +
+  geom_boxplot() +
+  labs(
+    title = "Boxplot for year 1993",
+    x = "Date",
+    y = "Concentration of CO"
+  ) +
+  theme_minimal()
+```
+> Boxplot 1993: The range goes from 0 to almost 6 for concentrations.
+
+```{r}
+ggplot(co2023, aes(x = DATE, y = CONCENTRATION)) +
+  geom_boxplot() +
+  labs(
+    title = "Boxplot for year 2023",
+    x = "Date",
+    y = "Concentration of CO"
+  ) +
+  theme_minimal()
+```
+> Boxplot 2023: The range goes from 0.25 to 1.25 for concentrations.
+
+```{r}
+combined = rbind(co1993, co2023)
+ggplot() +
+  geom_boxplot(data = co1993, aes(x = "Boxplot 1", y = CONCENTRATION), fill = "purple", alpha = 0.5) +
+  geom_boxplot(data = co2023, aes(x = "Boxplot 2", y = CONCENTRATION), fill = "green", alpha = 0.5) +
+  labs(title = "Overlayed Boxplots", x = NULL, y = "Concentration") +
+  theme_minimal()
+```
+
+```{r}
+
+ggplot() +
+  geom_density(data = co2023, aes(x = CONCENTRATION, color = "2023"), fill = "blue", alpha = 0.5) +
+  geom_density(data = co1993, aes(x = CONCENTRATION, color = "1993"), fill = "red", alpha = 0.5) +
+  labs(
+    title = "Density Plot of Datasets for 1993 and 2023",
+    x = "Concentration",
+    y = "Density"
+  ) +
+  scale_color_manual(values = c("red", "blue")) + 
+  theme_minimal()
+
+```
+
+T.TEST
+Model:
+X_i ~ D1(mu1, sigma1), for i in i...n1
+Y_1 ~ D2(mu2, sigma2), for i in i...n2
+
+```{r}
+x = co1993 %>% pull(CONCENTRATION)
+y = co2023 %>% pull(CONCENTRATION)
+
+mean = c(mean(x), mean(y))
+s = c(sd(x), sd(y))
+n = c(length(x), length(y))
+stat = data.frame(mean, s, n)
+stat
+
+t.test(x, y, alternative = "greater")
+dof = t.test(x,y)$parameter
+ci = mean(x) - mean(y) + c(-1, 1)*qt(0.975, dof)*sqrt(s[1]^2/n[1] + s[2]^2/n[2])
+ci
+```
+> Since the p-value is extremely low, much smaller than the conventional significance level of 0.05, it tells us that our hypothesis that CO concentration of 2023 is greater than 1993, is false. This indicates strong evidence that there is a significant difference between the means of CO concentration in 1993 and 2023, with the mean of year 1993 likely being greater than the mean of year 2023.
+The alternative hypothesis suggests that the mean of concentration in 1993 is greater than the mean of CO concentration in 2023, and the extremely low p-value supports this conclusion.
+On average, the mean of CO concentration in 1993 (1.0323050) is substantially higher than the mean of  CO concentration in 2023 (0.4068493).
+Since we got the same result from confidence interval and t.test, our interpretation is right.
+
+
+> Density Plot: This shows that the density of 2023 was higher for lower concentrations, and the density of 1993 was more spread out and higher for higher concentrations relative to 2023. 
+
+
+
+> Discussion: We can see from these graphs that the 1993 concentrations are actually higher than the 2023 concentrations. Furthermore, the trends do not align with the seasons and directly contradict each other once again. So the carbon concentration in Milwaukee is in fact lower in 2023 than 1993 according to these datasets. And they do not align in terms of seasons.
+
+>Even though we trust our analysis process, there’s still things we should improve in the future research. One of the most effective is our data. In the two data frame that we were using, the data about 1993 CO concentration is Milwaukee includes 6 different monitor sites, but data of 2023 was only from 1 site. We could still get the right trend and pattern about how did the CO concentration change in 30 years, t but this problem would lower the accuracy of our statistical information and calculation related to data from year 2023. 
+In the future, we will explore the original data more and be more careful about each elements that the data includes.
+
